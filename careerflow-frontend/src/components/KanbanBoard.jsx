@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { DragDropContext } from '@hello-pangea/dnd';
 import Column from './Column';
+
+const API_URL = 'http://localhost:5000/api/jobs';
 
 // Mock initial data - this will eventually come from your MongoDB backend
 const initialData = {
@@ -22,60 +25,88 @@ const initialData = {
 const KanbanBoard = () => {
   const [data, setData] = useState(initialData);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(API_URL);
+        const fetchedJobs = response.data; // Assuming this returns an array of job objects
+
+        // Transform the array from MongoDB into our structured state
+        const formattedJobs = {};
+        const formattedColumns = {
+          wishlist: { id: 'wishlist', title: 'Wishlist', jobIds: [] },
+          applied: { id: 'applied', title: 'Applied', jobIds: [] },
+          interviewing: { id: 'interviewing', title: 'Interviewing', jobIds: [] },
+          rejected: { id: 'rejected', title: 'Rejected', jobIds: [] }
+        };
+
+        fetchedJobs.forEach(job => {
+          // Use the MongoDB _id as the primary key
+          const jobId = job._id.toString(); 
+          formattedJobs[jobId] = { ...job, id: jobId };
+          
+          // Push the ID into the correct column based on the job's status
+          if (formattedColumns[job.status]) {
+             formattedColumns[job.status].jobIds.push(jobId);
+          }
+        });
+
+        setData({
+          jobs: formattedJobs,
+          columns: formattedColumns,
+          columnOrder: ['wishlist', 'applied', 'interviewing', 'rejected']
+        });
+        
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError("Failed to load your jobs. Please ensure the backend is running.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []); // Empty dependency array means this runs once on mount
   // This function fires the moment the user drops a card
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
 
-    // 1. If dropped outside a droppable area, do nothing
     if (!destination) return;
-
-    // 2. If dropped in the exact same spot it started, do nothing
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
     const startColumn = data.columns[source.droppableId];
     const finishColumn = data.columns[destination.droppableId];
 
-    // 3. Moving within the SAME column
-    if (startColumn === finishColumn) {
-      const newJobIds = Array.from(startColumn.jobIds);
-      newJobIds.splice(source.index, 1); // Remove from old index
-      newJobIds.splice(destination.index, 0, draggableId); // Insert at new index
+    // ... (Keep the exact same state update logic from the previous step here) ...
+    // ... (Updating startColumn, finishColumn, and calling setData) ...
 
-      const newColumn = { ...startColumn, jobIds: newJobIds };
-      setData({
-        ...data,
-        columns: { ...data.columns, [newColumn.id]: newColumn }
-      });
-      return;
-    }
-
-    // 4. Moving from ONE column to ANOTHER
-    const startJobIds = Array.from(startColumn.jobIds);
-    startJobIds.splice(source.index, 1); // Remove from source
-    const newStart = { ...startColumn, jobIds: startJobIds };
-
-    const finishJobIds = Array.from(finishColumn.jobIds);
-    finishJobIds.splice(destination.index, 0, draggableId); // Insert into destination
-    const newFinish = { ...finishColumn, jobIds: finishJobIds };
-
-    setData({
-      ...data,
-      columns: {
-        ...data.columns,
-        [newStart.id]: newStart,
-        [newFinish.id]: newFinish
+    // NEW: If the card moved to a DIFFERENT column, update the database
+    if (startColumn !== finishColumn) {
+      const newStatus = finishColumn.id; // e.g., 'interviewing'
+      
+      try {
+        // Send the PUT request to your Express backend
+        await axios.put(`${API_URL}/${draggableId}`, {
+          status: newStatus
+        });
+        console.log(`Successfully updated job ${draggableId} to ${newStatus}`);
+      } catch (err) {
+        console.error("Failed to update job status:", err);
+        
+        // TODO (Advanced): If the API call fails, you should ideally revert 
+        // the state back to what it was before the drag happened so the UI 
+        // matches the database. 
+        alert("Failed to save changes to the server.");
       }
-    });
-
-    // TODO: Right here is where you will eventually fire your PUT request 
-    // using axios to update the job's status in your Node/Express backend!
+    }
   };
 
+  if (loading) return <Container className="py-5 text-center">Loading your CareerFlow...</Container>;
+  if (error) return <Container className="py-5 text-center text-danger">{error}</Container>;
   return (
     <Container fluid className="py-4 bg-light min-vh-100">
       <h2 className="mb-4 text-center">CareerFlow Tracker</h2>
