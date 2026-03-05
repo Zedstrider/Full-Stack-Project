@@ -70,6 +70,38 @@ const KanbanBoard = () => {
     }
   };
 
+  const handleDeleteJob = async (jobId, columnId) => {
+    // Optional: Add a simple confirmation dialog before deleting
+    if (!window.confirm("Are you sure you want to delete this application?")) return;
+
+    try {
+      // 1. Send DELETE request to your Express backend
+      await axios.delete(`${API_URL}/${jobId}`);
+
+      // 2. Update frontend state
+      setData(prevData => {
+        const newJobs = { ...prevData.jobs };
+        delete newJobs[jobId]; // Remove the job from the jobs object
+
+        const column = prevData.columns[columnId];
+        const newJobIds = column.jobIds.filter(id => id !== jobId); // Remove ID from the column
+
+        return {
+          ...prevData,
+          jobs: newJobs,
+          columns: {
+            ...prevData.columns,
+            [columnId]: { ...column, jobIds: newJobIds }
+          }
+        };
+      });
+
+    } catch (err) {
+      console.error("Failed to delete job:", err);
+      alert("Failed to delete the job. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const fetchJobs = async () => {
       try {
@@ -166,7 +198,7 @@ const KanbanBoard = () => {
 
             return (
               <Col xs={12} md={6} lg={3} key={column.id}>
-                <Column column={column} jobs={jobs} />
+                <Column column={column} jobs={jobs} handleDeleteJob={handleDeleteJob} />
               </Col>
             );
           })}

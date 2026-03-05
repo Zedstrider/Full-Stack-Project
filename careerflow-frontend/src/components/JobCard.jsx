@@ -18,6 +18,15 @@ const JobCard = ({ job, index }) => {
           }}
         >
           <Card className="mb-3 shadow-sm border-0 bg-white">
+            /* NEW: Delete Button */
+            <Button 
+              variant="link" 
+              className="text-danger position-absolute top-0 end-0 p-2" 
+              style={{ textDecoration: 'none', zIndex: 10 }}
+              onClick={() => handleDeleteJob(job.id, columnId)}
+            >
+              <i className="bi bi-trash"></i>
+            </Button>
             <Card.Body className="p-3">
               <Card.Title className="h6 mb-1">{job.role}</Card.Title>
               <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.85rem' }}>
