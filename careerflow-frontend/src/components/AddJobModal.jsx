@@ -31,6 +31,8 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
 
     // Send the data back up to the KanbanBoard
     handleSaveJob(formData);
+
+    handleClose();
   };
 
   // Determine if we are in edit mode for dynamic text
