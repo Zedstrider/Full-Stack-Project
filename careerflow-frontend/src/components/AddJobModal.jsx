@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 const AddJobModal = ({ show, handleClose, handleAddJob }) => {
-  // Local state to manage the form inputs
+  // 1. Add 'status' to the initial state, defaulting to 'wishlist'
   const [formData, setFormData] = useState({
     role: '',
     company: '',
-    location: ''
+    location: '',
+    status: 'wishlist' 
   });
 
   const handleChange = (e) => {
@@ -15,16 +16,14 @@ const AddJobModal = ({ show, handleClose, handleAddJob }) => {
   };
 
   const onSubmit = (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault(); 
     
-    // Basic validation
     if (!formData.role || !formData.company) return;
 
-    // Pass data to parent component
     handleAddJob(formData);
     
-    // Reset form and close modal
-    setFormData({ role: '', company: '', location: '' });
+    // Reset form to default values upon closing
+    setFormData({ role: '', company: '', location: '', status: 'wishlist' });
     handleClose();
   };
 
@@ -69,6 +68,22 @@ const AddJobModal = ({ show, handleClose, handleAddJob }) => {
               onChange={handleChange}
             />
           </Form.Group>
+
+          {/* 2. NEW: Add a Select dropdown for the Column/Status */}
+          <Form.Group className="mb-3" controlId="formStatus">
+            <Form.Label>Current Status</Form.Label>
+            <Form.Select 
+              name="status" 
+              value={formData.status} 
+              onChange={handleChange}
+            >
+              <option value="wishlist">Wishlist</option>
+              <option value="applied">Applied</option>
+              <option value="interviewing">Interviewing</option>
+              <option value="rejected">Rejected</option>
+            </Form.Select>
+          </Form.Group>
+
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>

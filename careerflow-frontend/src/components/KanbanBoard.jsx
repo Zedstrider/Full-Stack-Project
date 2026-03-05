@@ -1,18 +1,15 @@
-import axios from 'axios';
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import React, { useState } from 'react';
+import { Container, Row, Col, Button } from 'react-bootstrap';
 import { DragDropContext } from '@hello-pangea/dnd';
 import Column from './Column';
 import AddJobModal from './AddJobModal';
 
-const API_URL = 'http://localhost:5000/api/jobs';
-
-// Mock initial data - this will eventually come from your MongoDB backend
+// 1. Our Mock Data
 const initialData = {
   jobs: {
-    'job-1': { id: 'job-1', role: 'Frontend React Eng', company: 'TechCorp', location: 'Remote' },
-    'job-2': { id: 'job-2', role: 'Full Stack Dev', company: 'Innovate LLC', location: 'On-site' },
-    'job-3': { id: 'job-3', role: 'Software Engineer', company: 'CloudNet', location: 'Hybrid' },
+    'job-1': { id: 'job-1', role: 'Frontend React Eng', company: 'TechCorp', location: 'Remote', status: 'wishlist' },
+    'job-2': { id: 'job-2', role: 'Full Stack Dev', company: 'Innovate LLC', location: 'On-site', status: 'wishlist' },
+    'job-3': { id: 'job-3', role: 'Software Engineer', company: 'CloudNet', location: 'Hybrid', status: 'applied' },
   },
   columns: {
     'wishlist': { id: 'wishlist', title: 'Wishlist', jobIds: ['job-1', 'job-2'] },
@@ -24,129 +21,61 @@ const initialData = {
 };
 
 const KanbanBoard = () => {
+  // 2. State Initialization
   const [data, setData] = useState(initialData);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const handleAddJob = async (newJobData) => {
-    try {
-      // 1. Send POST request to backend
-      // Assuming your backend expects { role, company, location, status }
-      // and defaults the status to 'wishlist' if not provided.
-      const response = await axios.post(API_URL, {
-        ...newJobData,
-        status: 'wishlist' 
-      });
+  // 3. Add Job Logic (Local State)
+  const handleAddJob = (newJobData) => {
+    const newJobId = `job-${Date.now()}`; 
+    
+    // 1. The status is now coming directly from the modal's newJobData
+    const selectedStatus = newJobData.status; 
+    const formattedNewJob = { ...newJobData, id: newJobId };
 
-      const savedJob = response.data; // The newly created document from MongoDB
-      const newJobId = savedJob._id.toString();
-      
-      const formattedNewJob = { ...savedJob, id: newJobId };
+    // 2. Dynamically select the target column based on the user's input
+    const targetColumn = data.columns[selectedStatus];
+    
+    const newJobIds = Array.from(targetColumn.jobIds);
+    newJobIds.push(newJobId); // Add the job ID to the bottom of the selected column
 
-      // 2. Update frontend state immediately
-      const startColumn = data.columns['wishlist'];
-      const newJobIds = Array.from(startColumn.jobIds);
-      newJobIds.push(newJobId); // Add to the bottom of the wishlist
-
-      const newColumn = { ...startColumn, jobIds: newJobIds };
-
-      setData(prevData => ({
-        ...prevData,
-        jobs: {
-          ...prevData.jobs,
-          [newJobId]: formattedNewJob
-        },
-        columns: {
-          ...prevData.columns,
-          ['wishlist']: newColumn
-        }
-      }));
-
-    } catch (err) {
-      console.error("Failed to add job:", err);
-      alert("Failed to add the new job. Please try again.");
-    }
+    // 3. Update the state with the dynamic target column
+    setData(prevData => ({
+      ...prevData,
+      jobs: { ...prevData.jobs, [newJobId]: formattedNewJob },
+      columns: {
+        ...prevData.columns,
+        [selectedStatus]: { ...targetColumn, jobIds: newJobIds }
+      }
+    }));
+    
+    setShowModal(false);
   };
 
-  const handleDeleteJob = async (jobId, columnId) => {
-    // Optional: Add a simple confirmation dialog before deleting
+  // 4. Delete Job Logic (Local State)
+  const handleDeleteJob = (jobId, columnId) => {
     if (!window.confirm("Are you sure you want to delete this application?")) return;
 
-    try {
-      // 1. Send DELETE request to your Express backend
-      await axios.delete(`${API_URL}/${jobId}`);
+    setData(prevData => {
+      const newJobs = { ...prevData.jobs };
+      delete newJobs[jobId]; 
 
-      // 2. Update frontend state
-      setData(prevData => {
-        const newJobs = { ...prevData.jobs };
-        delete newJobs[jobId]; // Remove the job from the jobs object
+      const column = prevData.columns[columnId];
+      const newJobIds = column.jobIds.filter(id => id !== jobId); 
 
-        const column = prevData.columns[columnId];
-        const newJobIds = column.jobIds.filter(id => id !== jobId); // Remove ID from the column
-
-        return {
-          ...prevData,
-          jobs: newJobs,
-          columns: {
-            ...prevData.columns,
-            [columnId]: { ...column, jobIds: newJobIds }
-          }
-        };
-      });
-
-    } catch (err) {
-      console.error("Failed to delete job:", err);
-      alert("Failed to delete the job. Please try again.");
-    }
+      return {
+        ...prevData,
+        jobs: newJobs,
+        columns: {
+          ...prevData.columns,
+          [columnId]: { ...column, jobIds: newJobIds }
+        }
+      };
+    });
   };
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(API_URL);
-        const fetchedJobs = response.data; // Assuming this returns an array of job objects
-
-        // Transform the array from MongoDB into our structured state
-        const formattedJobs = {};
-        const formattedColumns = {
-          wishlist: { id: 'wishlist', title: 'Wishlist', jobIds: [] },
-          applied: { id: 'applied', title: 'Applied', jobIds: [] },
-          interviewing: { id: 'interviewing', title: 'Interviewing', jobIds: [] },
-          rejected: { id: 'rejected', title: 'Rejected', jobIds: [] }
-        };
-
-        fetchedJobs.forEach(job => {
-          // Use the MongoDB _id as the primary key
-          const jobId = job._id.toString(); 
-          formattedJobs[jobId] = { ...job, id: jobId };
-          
-          // Push the ID into the correct column based on the job's status
-          if (formattedColumns[job.status]) {
-             formattedColumns[job.status].jobIds.push(jobId);
-          }
-        });
-
-        setData({
-          jobs: formattedJobs,
-          columns: formattedColumns,
-          columnOrder: ['wishlist', 'applied', 'interviewing', 'rejected']
-        });
-        
-      } catch (err) {
-        console.error("Error fetching jobs:", err);
-        setError("Failed to load your jobs. Please ensure the backend is running.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJobs();
-  }, []); // Empty dependency array means this runs once on mount
-  // This function fires the moment the user drops a card
-  const onDragEnd = async (result) => {
+  // 5. Drag and Drop Logic (Local State)
+  const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -155,32 +84,40 @@ const KanbanBoard = () => {
     const startColumn = data.columns[source.droppableId];
     const finishColumn = data.columns[destination.droppableId];
 
-    // ... (Keep the exact same state update logic from the previous step here) ...
-    // ... (Updating startColumn, finishColumn, and calling setData) ...
+    // Moving within the SAME column
+    if (startColumn === finishColumn) {
+      const newJobIds = Array.from(startColumn.jobIds);
+      newJobIds.splice(source.index, 1);
+      newJobIds.splice(destination.index, 0, draggableId);
 
-    // NEW: If the card moved to a DIFFERENT column, update the database
-    if (startColumn !== finishColumn) {
-      const newStatus = finishColumn.id; // e.g., 'interviewing'
-      
-      try {
-        // Send the PUT request to your Express backend
-        await axios.put(`${API_URL}/${draggableId}`, {
-          status: newStatus
-        });
-        console.log(`Successfully updated job ${draggableId} to ${newStatus}`);
-      } catch (err) {
-        console.error("Failed to update job status:", err);
-        
-        // TODO (Advanced): If the API call fails, you should ideally revert 
-        // the state back to what it was before the drag happened so the UI 
-        // matches the database. 
-        alert("Failed to save changes to the server.");
-      }
+      setData({
+        ...data,
+        columns: {
+          ...data.columns,
+          [startColumn.id]: { ...startColumn, jobIds: newJobIds }
+        }
+      });
+      return;
     }
+
+    // Moving to a DIFFERENT column
+    const startJobIds = Array.from(startColumn.jobIds);
+    startJobIds.splice(source.index, 1);
+    
+    const finishJobIds = Array.from(finishColumn.jobIds);
+    finishJobIds.splice(destination.index, 0, draggableId);
+
+    setData({
+      ...data,
+      columns: {
+        ...data.columns,
+        [startColumn.id]: { ...startColumn, jobIds: startJobIds },
+        [finishColumn.id]: { ...finishColumn, jobIds: finishJobIds }
+      }
+    });
   };
 
-  if (loading) return <Container className="py-5 text-center">Loading your CareerFlow...</Container>;
-  if (error) return <Container className="py-5 text-center text-danger">{error}</Container>;
+  // 6. The UI
   return (
     <Container fluid className="py-4 bg-light min-vh-100">
       <div className="d-flex justify-content-between align-items-center mb-4 px-3">
@@ -189,7 +126,7 @@ const KanbanBoard = () => {
           + Add New Job
         </Button>
       </div>
-      {/* Wrap everything that handles drag-and-drop in the Context */}
+
       <DragDropContext onDragEnd={onDragEnd}>
         <Row className="flex-nowrap overflow-auto pb-3">
           {data.columnOrder.map(columnId => {
@@ -198,19 +135,23 @@ const KanbanBoard = () => {
 
             return (
               <Col xs={12} md={6} lg={3} key={column.id}>
-                <Column column={column} jobs={jobs} handleDeleteJob={handleDeleteJob} />
+                <Column 
+                  column={column} 
+                  jobs={jobs} 
+                  handleDeleteJob={handleDeleteJob} 
+                />
               </Col>
             );
           })}
         </Row>
       </DragDropContext>
+
       <AddJobModal 
         show={showModal} 
         handleClose={() => setShowModal(false)} 
         handleAddJob={handleAddJob} 
       />
     </Container>
-    
   );
 };
 
