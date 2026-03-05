@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { DragDropContext } from '@hello-pangea/dnd';
 import Column from './Column';
+import AddJobModal from './AddJobModal';
 
 const API_URL = 'http://localhost:5000/api/jobs';
 
@@ -27,6 +28,47 @@ const KanbanBoard = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const handleAddJob = async (newJobData) => {
+    try {
+      // 1. Send POST request to backend
+      // Assuming your backend expects { role, company, location, status }
+      // and defaults the status to 'wishlist' if not provided.
+      const response = await axios.post(API_URL, {
+        ...newJobData,
+        status: 'wishlist' 
+      });
+
+      const savedJob = response.data; // The newly created document from MongoDB
+      const newJobId = savedJob._id.toString();
+      
+      const formattedNewJob = { ...savedJob, id: newJobId };
+
+      // 2. Update frontend state immediately
+      const startColumn = data.columns['wishlist'];
+      const newJobIds = Array.from(startColumn.jobIds);
+      newJobIds.push(newJobId); // Add to the bottom of the wishlist
+
+      const newColumn = { ...startColumn, jobIds: newJobIds };
+
+      setData(prevData => ({
+        ...prevData,
+        jobs: {
+          ...prevData.jobs,
+          [newJobId]: formattedNewJob
+        },
+        columns: {
+          ...prevData.columns,
+          ['wishlist']: newColumn
+        }
+      }));
+
+    } catch (err) {
+      console.error("Failed to add job:", err);
+      alert("Failed to add the new job. Please try again.");
+    }
+  };
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -109,7 +151,12 @@ const KanbanBoard = () => {
   if (error) return <Container className="py-5 text-center text-danger">{error}</Container>;
   return (
     <Container fluid className="py-4 bg-light min-vh-100">
-      <h2 className="mb-4 text-center">CareerFlow Tracker</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4 px-3">
+        <h2>CareerFlow Tracker</h2>
+        <Button variant="primary" onClick={() => setShowModal(true)}>
+          + Add New Job
+        </Button>
+      </div>
       {/* Wrap everything that handles drag-and-drop in the Context */}
       <DragDropContext onDragEnd={onDragEnd}>
         <Row className="flex-nowrap overflow-auto pb-3">
@@ -125,7 +172,13 @@ const KanbanBoard = () => {
           })}
         </Row>
       </DragDropContext>
+      <AddJobModal 
+        show={showModal} 
+        handleClose={() => setShowModal(false)} 
+        handleAddJob={handleAddJob} 
+      />
     </Container>
+    
   );
 };
 
