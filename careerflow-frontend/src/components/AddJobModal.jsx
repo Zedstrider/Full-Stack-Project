@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
-const AddJobModal = ({ show, handleClose, handleAddJob }) => {
-  // 1. Add 'status' to the initial state, defaulting to 'wishlist'
+// Added editingJob prop
+const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
   const [formData, setFormData] = useState({
     role: '',
     company: '',
     location: '',
     status: 'wishlist' 
   });
+
+  // Pre-fill the form if we are editing an existing job
+  useEffect(() => {
+    if (editingJob) {
+      setFormData(editingJob); // Populate with existing data
+    } else {
+      // Reset to default for a new job
+      setFormData({ role: '', company: '', location: '', status: 'wishlist' });
+    }
+  }, [editingJob, show]); // Re-run when the modal opens or the editingJob changes
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,20 +27,20 @@ const AddJobModal = ({ show, handleClose, handleAddJob }) => {
 
   const onSubmit = (e) => {
     e.preventDefault(); 
-    
     if (!formData.role || !formData.company) return;
 
-    handleAddJob(formData);
-    
-    // Reset form to default values upon closing
-    setFormData({ role: '', company: '', location: '', status: 'wishlist' });
-    handleClose();
+    // Send the data back up to the KanbanBoard
+    handleSaveJob(formData);
   };
+
+  // Determine if we are in edit mode for dynamic text
+  const isEditing = !!editingJob;
 
   return (
     <Modal show={show} onHide={handleClose} centered>
       <Modal.Header closeButton>
-        <Modal.Title>Add New Application</Modal.Title>
+        {/* Dynamic Title */}
+        <Modal.Title>{isEditing ? 'Edit Application' : 'Add New Application'}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={onSubmit}>
         <Modal.Body>
@@ -69,28 +79,21 @@ const AddJobModal = ({ show, handleClose, handleAddJob }) => {
             />
           </Form.Group>
 
-          {/* 2. NEW: Add a Select dropdown for the Column/Status */}
           <Form.Group className="mb-3" controlId="formStatus">
             <Form.Label>Current Status</Form.Label>
-            <Form.Select 
-              name="status" 
-              value={formData.status} 
-              onChange={handleChange}
-            >
+            <Form.Select name="status" value={formData.status} onChange={handleChange}>
               <option value="wishlist">Wishlist</option>
               <option value="applied">Applied</option>
               <option value="interviewing">Interviewing</option>
               <option value="rejected">Rejected</option>
             </Form.Select>
           </Form.Group>
-
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Cancel
-          </Button>
+          <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+          {/* Dynamic Button Text */}
           <Button variant="primary" type="submit">
-            Save Application
+            {isEditing ? 'Save Changes' : 'Save Application'}
           </Button>
         </Modal.Footer>
       </Form>

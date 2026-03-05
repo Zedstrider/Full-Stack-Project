@@ -3,7 +3,7 @@ import { Card } from 'react-bootstrap';
 import { Droppable } from '@hello-pangea/dnd';
 import JobCard from './JobCard';
 
-const Column = ({ column, jobs, handleDeleteJob }) => {
+const Column = ({ column, jobs, handleDeleteJob, openEditModal }) => {
   return (
     <Card className="h-100 bg-white border-0 shadow-sm">
       <Card.Header className="bg-transparent border-0 pt-3 pb-0">
@@ -29,7 +29,8 @@ const Column = ({ column, jobs, handleDeleteJob }) => {
                 job={job} 
                 index={index} 
                 columnId={column.id} 
-                handleDeleteJob={handleDeleteJob} />
+                handleDeleteJob={handleDeleteJob}
+                openEditModal={openEditModal} />
               ))}
               
               {/* placeholder is required! It takes up space so the list doesn't collapse when an item is dragged out */}

@@ -21,25 +21,66 @@ const initialData = {
 };
 
 const KanbanBoard = () => {
-  // 2. State Initialization
+  // State Initialization
   const [data, setData] = useState(initialData);
   const [showModal, setShowModal] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
 
-  // 3. Add Job Logic (Local State)
-  const handleAddJob = (newJobData) => {
+  const openAddModal = () => {
+    setEditingJob(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (job) => {
+    setEditingJob(job);
+    setShowModal(true);
+  };
+
+  const handleSaveJob = (jobData) => {
+    if (editingJob) {
+      // --- EDIT EXISTING JOB LOGIC ---
+      setData(prevData => {
+        const originalJob = prevData.jobs[jobData.id];
+        let newColumns = { ...prevData.columns };
+
+        // If the user changed the status dropdown, we must move the ID to the new column
+        if (originalJob.status !== jobData.status) {
+          const oldColumn = newColumns[originalJob.status];
+          const newColumn = newColumns[jobData.status];
+
+          // Remove ID from old column
+          newColumns[originalJob.status] = {
+            ...oldColumn,
+            jobIds: oldColumn.jobIds.filter(id => id !== jobData.id)
+          };
+          
+          // Add ID to new column
+          newColumns[jobData.status] = {
+            ...newColumn,
+            jobIds: [...newColumn.jobIds, jobData.id]
+          };
+        }
+
+        return {
+          ...prevData,
+          jobs: { ...prevData.jobs, [jobData.id]: jobData }, // Update job details
+          columns: newColumns
+        };
+      });
+    }else{
     const newJobId = `job-${Date.now()}`; 
     
-    // 1. The status is now coming directly from the modal's newJobData
+    // The status is now coming directly from the modal's newJobData
     const selectedStatus = newJobData.status; 
     const formattedNewJob = { ...newJobData, id: newJobId };
 
-    // 2. Dynamically select the target column based on the user's input
+    // Dynamically select the target column based on the user's input
     const targetColumn = data.columns[selectedStatus];
     
     const newJobIds = Array.from(targetColumn.jobIds);
     newJobIds.push(newJobId); // Add the job ID to the bottom of the selected column
 
-    // 3. Update the state with the dynamic target column
+    // Update the state with the dynamic target column
     setData(prevData => ({
       ...prevData,
       jobs: { ...prevData.jobs, [newJobId]: formattedNewJob },
@@ -50,9 +91,10 @@ const KanbanBoard = () => {
     }));
     
     setShowModal(false);
-  };
+  }
+};
 
-  // 4. Delete Job Logic (Local State)
+  // Delete Job Logic (Local State)
   const handleDeleteJob = (jobId, columnId) => {
     if (!window.confirm("Are you sure you want to delete this application?")) return;
 
@@ -74,7 +116,7 @@ const KanbanBoard = () => {
     });
   };
 
-  // 5. Drag and Drop Logic (Local State)
+  // Drag and Drop Logic (Local State)
   const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
 
@@ -117,12 +159,12 @@ const KanbanBoard = () => {
     });
   };
 
-  // 6. The UI
+  // The UI
   return (
     <Container fluid className="py-4 bg-light min-vh-100">
       <div className="d-flex justify-content-between align-items-center mb-4 px-3">
         <h2>CareerFlow Tracker</h2>
-        <Button variant="primary" onClick={() => setShowModal(true)}>
+        <Button variant="primary" onClick={openAddModal}>
           + Add New Job
         </Button>
       </div>
@@ -139,6 +181,7 @@ const KanbanBoard = () => {
                   column={column} 
                   jobs={jobs} 
                   handleDeleteJob={handleDeleteJob} 
+                  openEditModal={openEditModal}
                 />
               </Col>
             );
@@ -148,8 +191,9 @@ const KanbanBoard = () => {
 
       <AddJobModal 
         show={showModal} 
-        handleClose={() => setShowModal(false)} 
-        handleAddJob={handleAddJob} 
+        handleClose={() => { setShowModal(false); setEditingJob(null); }} 
+        handleSaveJob={handleSaveJob} 
+        editingJob={editingJob}
       />
     </Container>
   );
