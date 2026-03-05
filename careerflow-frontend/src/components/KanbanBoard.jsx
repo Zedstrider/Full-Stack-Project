@@ -71,8 +71,8 @@ const KanbanBoard = () => {
     const newJobId = `job-${Date.now()}`; 
     
     // The status is now coming directly from the modal's newJobData
-    const selectedStatus = newJobData.status; 
-    const formattedNewJob = { ...newJobData, id: newJobId };
+    const selectedStatus = jobData.status; 
+    const formattedNewJob = { ...jobData, id: newJobId };
 
     // Dynamically select the target column based on the user's input
     const targetColumn = data.columns[selectedStatus];
@@ -96,7 +96,7 @@ const KanbanBoard = () => {
 
   // Delete Job Logic (Local State)
   const handleDeleteJob = (jobId, columnId) => {
-    if (!window.confirm("Are you sure you want to delete this application?")) return;
+    if (!window.confirm("Are you sure you want to delete this job entry?")) return;
 
     setData(prevData => {
       const newJobs = { ...prevData.jobs };
@@ -177,7 +177,7 @@ const KanbanBoard = () => {
   return (
     <Container fluid className="py-4 bg-light min-vh-100">
       <div className="d-flex justify-content-between align-items-center mb-4 px-3">
-        <h2>CareerFlow Tracker</h2>
+        <h2>Job Application Tracker</h2>
         <Button variant="primary" onClick={openAddModal}>
           + Add New Job
         </Button>
