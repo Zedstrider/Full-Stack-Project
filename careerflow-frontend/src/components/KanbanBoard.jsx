@@ -120,13 +120,16 @@ const KanbanBoard = () => {
   const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
 
+    // If dropped outside a valid area, do nothing
     if (!destination) return;
+    
+    // If dropped in the exact same spot, do nothing
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
     const startColumn = data.columns[source.droppableId];
     const finishColumn = data.columns[destination.droppableId];
 
-    // Moving within the SAME column
+    // --- Moving within the SAME column ---
     if (startColumn === finishColumn) {
       const newJobIds = Array.from(startColumn.jobIds);
       newJobIds.splice(source.index, 1);
@@ -142,15 +145,26 @@ const KanbanBoard = () => {
       return;
     }
 
-    // Moving to a DIFFERENT column
+    // --- Moving to a DIFFERENT column ---
     const startJobIds = Array.from(startColumn.jobIds);
     startJobIds.splice(source.index, 1);
     
     const finishJobIds = Array.from(finishColumn.jobIds);
     finishJobIds.splice(destination.index, 0, draggableId);
 
+    // Update the status property on the job object itself
+    const updatedJob = {
+      ...data.jobs[draggableId],
+      status: finishColumn.id // e.g., updates 'wishlist' to 'interviewing'
+    };
+
+    // Save everything back to state
     setData({
       ...data,
+      jobs: {
+        ...data.jobs,
+        [draggableId]: updatedJob // Overwrite the old job with the updated one
+      },
       columns: {
         ...data.columns,
         [startColumn.id]: { ...startColumn, jobIds: startJobIds },
