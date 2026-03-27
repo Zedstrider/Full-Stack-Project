@@ -39,12 +39,15 @@ const JobCard = ({ job, index, columnId, handleDeleteJob, openEditModal }) => {
 
             {/* Added pe-4 to the Card.Body so the text doesn't overlap the trash icon */}
             <Card.Body className="p-3 pe-5"> 
-              <Card.Title className="h6 mb-1">{job.role}</Card.Title>
-              <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.85rem' }}>
+              <Card.Title className="h6 mb-1 text-truncate" style={{ lineHeight: '1.5' }} title={job.role}>{job.role}</Card.Title>
+              <Card.Subtitle className="mb-2 text-muted text-truncate" style={{ fontSize: '0.85rem', lineHeight: '1.5' }} title={job.company}>
                 {job.company}
               </Card.Subtitle>
-              <Badge bg="secondary" className="fw-normal">
-                {job.location}
+              <Badge bg="secondary" 
+                className="fw-normal" 
+                style={{ maxWidth: '100%' }}
+                title={job.location}>
+                  {job.location}
               </Badge>
             </Card.Body>
           </Card>

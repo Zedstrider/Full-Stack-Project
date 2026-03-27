@@ -29,8 +29,27 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
     e.preventDefault(); 
     if (!formData.role || !formData.company) return;
 
+    const cleanedRole = formData.role.trim();
+    const cleanedCompany = formData.company.trim();
+    const cleanedLocation = formData.location.trim();
+
+    // Validate Empty Strings: Check if they are empty AFTER removing spaces
+    if (!cleanedRole || !cleanedCompany) {
+      alert("Role and Company cannot be empty or just spaces.");
+      return; 
+    }
+
+    // Validate Length: Prevent insanely long garbage strings that break the UI
+    if (cleanedRole.length > 50 || cleanedCompany.length > 50 || cleanedLocation.length > 50) {
+      alert("Please keep Role, Company, and Location under 50 characters.");
+      return;
+    }
+
     // Send the data back up to the KanbanBoard
-    handleSaveJob(formData);
+    handleSaveJob({...formData,
+      role: cleanedRole,
+      company: cleanedCompany,
+      location: cleanedLocation});
 
     handleClose();
   };
