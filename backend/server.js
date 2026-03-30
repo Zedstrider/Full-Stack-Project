@@ -10,6 +10,9 @@ const app = express();
 app.use(cors()); // Allows your React app to make requests here
 app.use(express.json()); // Allows Express to parse JSON data from requests
 
+//Import and use the job routes
+const jobRoutes = require('./routes/jobRoutes');
+app.use('/api/jobs', jobRoutes);
 // A simple test route to make sure the server is running
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is up and running successfully!' });
