@@ -1,30 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import { DragDropContext } from '@hello-pangea/dnd';
 import Column from './Column';
 import AddJobModal from './AddJobModal';
+import axios from 'axios'; 
 
-// 1. Our Mock Data
-const initialData = {
-  jobs: {
-    'job-1': { id: 'job-1', role: 'Frontend React Eng', company: 'TechCorp', location: 'Remote', status: 'wishlist' },
-    'job-2': { id: 'job-2', role: 'Full Stack Dev', company: 'Innovate LLC', location: 'On-site', status: 'wishlist' },
-    'job-3': { id: 'job-3', role: 'Software Engineer', company: 'CloudNet', location: 'Hybrid', status: 'applied' },
-  },
+const emptyBoard = {
+  jobs: {},
   columns: {
-    'wishlist': { id: 'wishlist', title: 'Wishlist', jobIds: ['job-1', 'job-2'] },
-    'applied': { id: 'applied', title: 'Applied', jobIds: ['job-3'] },
+    'wishlist': { id: 'wishlist', title: 'Wishlist', jobIds: [] },
+    'applied': { id: 'applied', title: 'Applied', jobIds: [] },
     'interviewing': { id: 'interviewing', title: 'Interviewing', jobIds: [] },
     'rejected': { id: 'rejected', title: 'Rejected', jobIds: [] }
   },
   columnOrder: ['wishlist', 'applied', 'interviewing', 'rejected']
 };
 
+// Helper function to turn the MongoDB array into our Kanban format
+const buildBoardData = (jobsArray) => {
+  // Start with a fresh, empty board
+  const newBoard = JSON.parse(JSON.stringify(emptyBoard));
+
+  jobsArray.forEach(job => {
+    // MongoDB uses '_id', but our drag-and-drop uses 'id', so we map it over
+    const formattedJob = { ...job, id: job._id }; 
+    
+    // 1. Add the job to the jobs dictionary
+    newBoard.jobs[job._id] = formattedJob;
+    
+    // 2. Add the job's ID to the correct column's array
+    if (newBoard.columns[job.status]) {
+      newBoard.columns[job.status].jobIds.push(job._id);
+    }
+  });
+
+  return newBoard;
+};
+
 const KanbanBoard = () => {
   // State Initialization
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState(emptyBoard);
   const [showModal, setShowModal] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
+
+  //Fetch jobs from MongoDB when the component mounts
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/jobs');
+        // Pass the MongoDB array through our helper function
+        const formattedData = buildBoardData(response.data);
+        // Update the React state with the database data!
+        setData(formattedData);
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+      }
+    };
+
+    fetchJobs();
+  }, []); // The empty array ensures this only runs once on load
 
   const openAddModal = () => {
     setEditingJob(null);
