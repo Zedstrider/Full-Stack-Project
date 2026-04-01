@@ -70,84 +70,97 @@ const KanbanBoard = () => {
     setShowModal(true);
   };
 
-  const handleSaveJob = (jobData) => {
-    if (editingJob) {
-      // --- EDIT EXISTING JOB LOGIC ---
+  const handleSaveJob = async (jobData) => {
+    try {
+      if (editingJob) {
+        // --- 1. EDIT EXISTING JOB IN DATABASE ---
+        await axios.put(`http://localhost:5000/api/jobs/${jobData.id}`, jobData);
+
+        setData(prevData => {
+          const originalJob = prevData.jobs[jobData.id];
+          let newColumns = { ...prevData.columns };
+
+          if (originalJob.status !== jobData.status) {
+            const oldColumn = newColumns[originalJob.status];
+            const newColumn = newColumns[jobData.status];
+
+            newColumns[originalJob.status] = {
+              ...oldColumn,
+              jobIds: oldColumn.jobIds.filter(id => id !== jobData.id)
+            };
+            
+            newColumns[jobData.status] = {
+              ...newColumn,
+              jobIds: [...newColumn.jobIds, jobData.id]
+            };
+          }
+
+          return {
+            ...prevData,
+            jobs: { ...prevData.jobs, [jobData.id]: jobData },
+            columns: newColumns
+          };
+        });
+      } else {
+        // --- 2. SAVE NEW JOB TO DATABASE ---
+        // We POST to the backend, and MongoDB creates the real _id
+        const response = await axios.post('http://localhost:5000/api/jobs', jobData);
+        const newJob = response.data; 
+        
+        // Use the real MongoDB _id instead of our fake Date.now() ID
+        const newJobId = newJob._id; 
+        const formattedNewJob = { ...newJob, id: newJobId };
+        const selectedStatus = newJob.status; 
+        const targetColumn = data.columns[selectedStatus];
+        
+        const newJobIds = Array.from(targetColumn.jobIds);
+        newJobIds.push(newJobId); 
+
+        setData(prevData => ({
+          ...prevData,
+          jobs: { ...prevData.jobs, [newJobId]: formattedNewJob },
+          columns: {
+            ...prevData.columns,
+            [selectedStatus]: { ...targetColumn, jobIds: newJobIds }
+          }
+        }));
+      }
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error saving job:", error);
+      alert("Failed to save job to the database.");
+    }
+  };
+
+  // Delete Job Logic (Local State)
+  const handleDeleteJob = async (jobId, columnId) => {
+    if (!window.confirm("Are you sure you want to delete this job entry?")) return;
+
+    try {
+      // --- DELETE FROM DATABASE ---
+      await axios.delete(`http://localhost:5000/api/jobs/${jobId}`);
+
+      // --- DELETE FROM UI ---
       setData(prevData => {
-        const originalJob = prevData.jobs[jobData.id];
-        let newColumns = { ...prevData.columns };
+        const newJobs = { ...prevData.jobs };
+        delete newJobs[jobId]; 
 
-        // If the user changed the status dropdown, we must move the ID to the new column
-        if (originalJob.status !== jobData.status) {
-          const oldColumn = newColumns[originalJob.status];
-          const newColumn = newColumns[jobData.status];
-
-          // Remove ID from old column
-          newColumns[originalJob.status] = {
-            ...oldColumn,
-            jobIds: oldColumn.jobIds.filter(id => id !== jobData.id)
-          };
-          
-          // Add ID to new column
-          newColumns[jobData.status] = {
-            ...newColumn,
-            jobIds: [...newColumn.jobIds, jobData.id]
-          };
-        }
+        const column = prevData.columns[columnId];
+        const newJobIds = column.jobIds.filter(id => id !== jobId); 
 
         return {
           ...prevData,
-          jobs: { ...prevData.jobs, [jobData.id]: jobData }, // Update job details
-          columns: newColumns
+          jobs: newJobs,
+          columns: {
+            ...prevData.columns,
+            [columnId]: { ...column, jobIds: newJobIds }
+          }
         };
       });
-    }else{
-    const newJobId = `job-${Date.now()}`; 
-    
-    // The status is now coming directly from the modal's newJobData
-    const selectedStatus = jobData.status; 
-    const formattedNewJob = { ...jobData, id: newJobId };
-
-    // Dynamically select the target column based on the user's input
-    const targetColumn = data.columns[selectedStatus];
-    
-    const newJobIds = Array.from(targetColumn.jobIds);
-    newJobIds.push(newJobId); // Add the job ID to the bottom of the selected column
-
-    // Update the state with the dynamic target column
-    setData(prevData => ({
-      ...prevData,
-      jobs: { ...prevData.jobs, [newJobId]: formattedNewJob },
-      columns: {
-        ...prevData.columns,
-        [selectedStatus]: { ...targetColumn, jobIds: newJobIds }
-      }
-    }));
-    
-    setShowModal(false);
-  }
-};
-
-  // Delete Job Logic (Local State)
-  const handleDeleteJob = (jobId, columnId) => {
-    if (!window.confirm("Are you sure you want to delete this job entry?")) return;
-
-    setData(prevData => {
-      const newJobs = { ...prevData.jobs };
-      delete newJobs[jobId]; 
-
-      const column = prevData.columns[columnId];
-      const newJobIds = column.jobIds.filter(id => id !== jobId); 
-
-      return {
-        ...prevData,
-        jobs: newJobs,
-        columns: {
-          ...prevData.columns,
-          [columnId]: { ...column, jobIds: newJobIds }
-        }
-      };
-    });
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      alert("Failed to delete the job from the database.");
+    }
   };
 
   // Drag and Drop Logic (Local State)
@@ -191,6 +204,9 @@ const KanbanBoard = () => {
       ...data.jobs[draggableId],
       status: finishColumn.id // e.g., updates 'wishlist' to 'interviewing'
     };
+
+    axios.put(`http://localhost:5000/api/jobs/${draggableId}`, { status: finishColumn.id })
+      .catch(err => console.error("Database update failed:", err));
 
     // Save everything back to state
     setData({
