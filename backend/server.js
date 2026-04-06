@@ -18,6 +18,10 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is up and running successfully!' });
 });
 
+//Auth Routes
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Successfully connected to MongoDB'))
