@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
+  //Link this job to a specific user
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User' // This must exactly match the name of the User model
+  },
   role: {
     type: String,
     required: [true, 'Job role is required'],

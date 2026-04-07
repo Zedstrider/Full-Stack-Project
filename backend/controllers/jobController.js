@@ -1,11 +1,10 @@
 const Job = require('../models/Job');
 
 // 1. GET ALL JOBS
-// @route GET /api/jobs
 const getJobs = async (req, res) => {
   try {
-    // .sort({ updatedAt: -1 }) ensures the most recently interacted-with jobs appear first
-    const jobs = await Job.find().sort({ updatedAt: -1 });
+    //Only find jobs where the 'user' field matches the logged-in user's ID
+    const jobs = await Job.find({ user: req.user.id }).sort({ updatedAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -13,32 +12,31 @@ const getJobs = async (req, res) => {
 };
 
 // 2. CREATE A NEW JOB
-// @route POST /api/jobs
 const createJob = async (req, res) => {
   try {
+    //Attach the logged-in user's ID to the job data before saving
+    req.body.user = req.user.id;
+    
     const newJob = new Job(req.body);
     const savedJob = await newJob.save();
-    res.status(201).json(savedJob); // 201 means "Created"
+    res.status(201).json(savedJob);
   } catch (error) {
-    // 400 means "Bad Request" (e.g., they failed your Schema validation)
     res.status(400).json({ message: error.message });
   }
 };
 
-// 3. UPDATE A JOB (Used for editing details OR dragging to a new column)
-// @route PUT /api/jobs/:id
+// 3. UPDATE A JOB
 const updateJob = async (req, res) => {
   try {
-    const updatedJob = await Job.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
-      { 
-        new: true,           // Returns the newly updated document instead of the old one
-        runValidators: true  // Forces Mongoose to check the Schema rules again (crucial!)
-      }
-    );
-    if (!updatedJob) return res.status(404).json({ message: 'Job not found' });
-    
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    //SECURITY CHECK: Ensure the logged-in user owns this specific job
+    if (job.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to update this job' });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     res.status(200).json(updatedJob);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -46,13 +44,18 @@ const updateJob = async (req, res) => {
 };
 
 // 4. DELETE A JOB
-// @route DELETE /api/jobs/:id
 const deleteJob = async (req, res) => {
   try {
-    const deletedJob = await Job.findByIdAndDelete(req.params.id);
-    if (!deletedJob) return res.status(404).json({ message: 'Job not found' });
-    
-    res.status(200).json({ message: 'Job successfully deleted', id: deletedJob._id });
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    //SECURITY CHECK: Ensure the logged-in user owns this specific job
+    if (job.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to delete this job' });
+    }
+
+    await Job.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Job successfully deleted', id: req.params.id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
