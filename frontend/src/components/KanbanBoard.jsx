@@ -3,7 +3,7 @@ import { Container, Row, Col, Button } from 'react-bootstrap';
 import { DragDropContext } from '@hello-pangea/dnd';
 import Column from './Column';
 import AddJobModal from './AddJobModal';
-import axios from 'axios'; 
+import api from '../api'; 
 
 const emptyBoard = {
   jobs: {},
@@ -47,7 +47,7 @@ const KanbanBoard = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/jobs');
+        const response = await api.get('/jobs');
         // Pass the MongoDB array through our helper function
         const formattedData = buildBoardData(response.data);
         // Update the React state with the database data!
@@ -74,7 +74,7 @@ const KanbanBoard = () => {
     try {
       if (editingJob) {
         // --- 1. EDIT EXISTING JOB IN DATABASE ---
-        await axios.put(`http://localhost:5000/api/jobs/${jobData.id}`, jobData);
+        await api.put(`/jobs/${jobData.id}`, jobData);
 
         setData(prevData => {
           const originalJob = prevData.jobs[jobData.id];
@@ -104,7 +104,7 @@ const KanbanBoard = () => {
       } else {
         // --- 2. SAVE NEW JOB TO DATABASE ---
         // We POST to the backend, and MongoDB creates the real _id
-        const response = await axios.post('http://localhost:5000/api/jobs', jobData);
+        const response = await api.post('/jobs', jobData);
         const newJob = response.data; 
         
         // Use the real MongoDB _id instead of our fake Date.now() ID
@@ -138,7 +138,7 @@ const KanbanBoard = () => {
 
     try {
       // --- DELETE FROM DATABASE ---
-      await axios.delete(`http://localhost:5000/api/jobs/${jobId}`);
+      await api.delete(`/jobs/${jobId}`);
 
       // --- DELETE FROM UI ---
       setData(prevData => {
@@ -205,7 +205,7 @@ const KanbanBoard = () => {
       status: finishColumn.id // e.g., updates 'wishlist' to 'interviewing'
     };
 
-    axios.put(`http://localhost:5000/api/jobs/${draggableId}`, { status: finishColumn.id })
+    api.put(`/jobs/${draggableId}`, { status: finishColumn.id })
       .catch(err => console.error("Database update failed:", err));
 
     // Save everything back to state

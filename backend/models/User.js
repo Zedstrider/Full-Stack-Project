@@ -1,14 +1,10 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-  email: {
+  username: {
     type: String,
     required: true,
-    unique: true // Ensures no two accounts have the same email
+    unique: true 
   },
   password: {
     type: String,
