@@ -9,13 +9,8 @@ router.route('/')
   .get(protect, getJobs)
   .post(protect, createJob);
 
-// Clean, chained routing syntax
-router.route('/')
-  .get(getJobs)
-  .post(createJob);
-
 router.route('/:id')
-  .put(updateJob)
-  .delete(deleteJob);
+  .put(protect, updateJob)
+  .delete(protect, deleteJob);
 
 module.exports = router;

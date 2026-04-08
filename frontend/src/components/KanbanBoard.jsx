@@ -206,7 +206,8 @@ const KanbanBoard = () => {
     };
 
     api.put(`/jobs/${draggableId}`, { status: finishColumn.id })
-      .catch(err => console.error("Database update failed:", err));
+      .catch(err => {console.error("The exact backend error is:", err.response?.data?.message || err.message);
+        alert(`Failed to save drag: ${err.response?.data?.message}`);});
 
     // Save everything back to state
     setData({

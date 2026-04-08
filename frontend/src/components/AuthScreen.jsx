@@ -23,6 +23,9 @@ const AuthScreen = ({ setAuthStatus }) => {
 
       const response = await api.post(endpoint, payload);
 
+      // ADD THIS LINE TO SEE WHAT THE BACKEND IS SENDING:
+      console.log("Data from backend:", response.data);
+      
       // Save the token and username to the browser's local storage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('username', response.data.username);
