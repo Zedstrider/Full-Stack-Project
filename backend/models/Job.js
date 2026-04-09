@@ -28,10 +28,9 @@ const jobSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    // The enum restricts the database to ONLY accept these four exact strings
-    enum: ['wishlist', 'applied', 'interviewing', 'rejected'], 
-    default: 'wishlist'
-  }
+    enum: ['applied', 'interviewing', 'selected', 'rejected'], 
+    default: 'applied' // Automatically drops new jobs into the first column
+  },
 }, {
   // This automatically adds 'createdAt' and 'updatedAt' timestamps to every entry!
   timestamps: true 

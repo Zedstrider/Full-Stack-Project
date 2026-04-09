@@ -8,12 +8,13 @@ import api from '../api';
 const emptyBoard = {
   jobs: {},
   columns: {
-    'wishlist': { id: 'wishlist', title: 'Wishlist', jobIds: [] },
     'applied': { id: 'applied', title: 'Applied', jobIds: [] },
     'interviewing': { id: 'interviewing', title: 'Interviewing', jobIds: [] },
+    'selected': { id: 'selected', title: 'Selected', jobIds: [] },
     'rejected': { id: 'rejected', title: 'Rejected', jobIds: [] }
   },
-  columnOrder: ['wishlist', 'applied', 'interviewing', 'rejected']
+  // This array dictates the exact visual order on your screen left-to-right
+  columnOrder: ['applied', 'interviewing', 'selected', 'rejected']
 };
 
 // Helper function to turn the MongoDB array into our Kanban format

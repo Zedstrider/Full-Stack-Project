@@ -7,7 +7,7 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
     role: '',
     company: '',
     location: '',
-    status: 'wishlist' 
+    status: 'applied' 
   });
 
   // Pre-fill the form if we are editing an existing job
@@ -16,7 +16,7 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
       setFormData(editingJob); // Populate with existing data
     } else {
       // Reset to default for a new job
-      setFormData({ role: '', company: '', location: '', status: 'wishlist' });
+      setFormData({ role: '', company: '', location: '', status: 'applied' });
     }
   }, [editingJob, show]); // Re-run when the modal opens or the editingJob changes
 
@@ -103,9 +103,9 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
           <Form.Group className="mb-3" controlId="formStatus">
             <Form.Label>Current Status</Form.Label>
             <Form.Select name="status" value={formData.status} onChange={handleChange}>
-              <option value="wishlist">Wishlist</option>
               <option value="applied">Applied</option>
               <option value="interviewing">Interviewing</option>
+              <option value="selected">Selected</option>
               <option value="rejected">Rejected</option>
             </Form.Select>
           </Form.Group>
