@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
-import api from '../api'; // Import custom Axios instance
+import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import api from '../api';
+import './AuthScreen.css'; // Import our new custom styles
 
 const AuthScreen = ({ setAuthStatus }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,14 +24,9 @@ const AuthScreen = ({ setAuthStatus }) => {
 
       const response = await api.post(endpoint, payload);
 
-      // ADD THIS LINE TO SEE WHAT THE BACKEND IS SENDING:
-      console.log("Data from backend:", response.data);
-      
-      // Save the token and username to the browser's local storage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('username', response.data.username);
       
-      // Tell the main App component that we are logged in!
       setAuthStatus(true);
       
     } catch (err) {
@@ -39,59 +35,98 @@ const AuthScreen = ({ setAuthStatus }) => {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-      <div className="w-100" style={{ maxWidth: '400px' }}>
-        <Card className="shadow-sm border-0 rounded-lg mt-5">
-          <Card.Body className="p-5">
-            <h2 className="text-center mb-4 fw-bold">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h2>
-            
-            {error && <Alert variant="danger">{error}</Alert>}
-
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3" controlId="username">
-                <Form.Label>Username</Form.Label>
-                <Form.Control 
-                  type="text"                  
-                  name="username"              
-                  placeholder="Enter username" 
-                  onChange={handleChange} 
-                  required 
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-4" controlId="password">
-                <Form.Label>Password</Form.Label>
-                <Form.Control 
-                  type="password" 
-                  name="password" 
-                  placeholder="Enter your password" 
-                  onChange={handleChange} 
-                  required 
-                />
-              </Form.Group>
-
-              <Button variant="primary" type="submit" className="w-100 py-2 fw-bold">
-                {isLogin ? 'Log In' : 'Sign Up'}
-              </Button>
-            </Form>
-
-            <div className="text-center mt-4">
-              <span className="text-muted">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
-              </span>
-              <Button 
-                variant="link" 
-                className="p-0 text-decoration-none" 
-                onClick={() => { setIsLogin(!isLogin); setError(''); }}
-              >
-                {isLogin ? 'Sign Up' : 'Log In'}
-              </Button>
+    <Container fluid className="p-0 auth-container">
+      <Row className="g-0 min-vh-100">
+        
+        {/* LEFT COLUMN: Branding/Hero (Hidden on mobile devices) */}
+        <Col lg={5} className="d-none d-lg-flex flex-column justify-content-center p-5 auth-hero shadow">
+          <div className="ps-xl-5">
+            <h1 className="display-4 fw-bolder mb-4">CareerFlow</h1>
+            <p className="lead fw-normal mb-5" style={{ opacity: 0.9 }}>
+              Stop using spreadsheets. Start tracking your software engineering applications the right way.
+            </p>
+            <div className="d-flex align-items-center mb-3">
+              <div className="bg-white bg-opacity-25 rounded-circle p-2 me-3">
+                {/* A simple SVG checkmark */}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <span className="fs-5">Seamless Drag & Drop Pipeline</span>
             </div>
-          </Card.Body>
-        </Card>
-      </div>
+            <div className="d-flex align-items-center">
+              <div className="bg-white bg-opacity-25 rounded-circle p-2 me-3">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </div>
+              <span className="fs-5">Secure JWT Authentication</span>
+            </div>
+          </div>
+        </Col>
+
+        {/* RIGHT COLUMN: The Form */}
+        <Col lg={7} className="d-flex align-items-center justify-content-center p-4 p-sm-5">
+          <div className="w-100" style={{ maxWidth: '420px' }}>
+            
+            {/* Mobile Title (Only shows on small screens) */}
+            <div className="d-lg-none text-center mb-5">
+              <h1 className="fw-bolder text-primary">CareerFlow</h1>
+            </div>
+
+            <Card className="auth-card p-4 p-sm-5">
+              <h2 className="fw-bold mb-1">
+                {isLogin ? 'Welcome back' : 'Create an account'}
+              </h2>
+              <p className="text-muted mb-4">
+                {isLogin ? 'Enter your details to access your board.' : 'Start tracking your applications today.'}
+              </p>
+              
+              {error && <Alert variant="danger" className="border-0 rounded">{error}</Alert>}
+
+              <Form onSubmit={handleSubmit}>
+                <Form.Group className="mb-4" controlId="username">
+                  <Form.Label className="fw-semibold text-secondary small text-uppercase tracking-wider">Username</Form.Label>
+                  <Form.Control 
+                    type="text"                  
+                    name="username"              
+                    placeholder="Enter username" 
+                    onChange={handleChange} 
+                    className="auth-input"
+                    required 
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-4" controlId="password">
+                  <Form.Label className="fw-semibold text-secondary small text-uppercase tracking-wider">Password</Form.Label>
+                  <Form.Control 
+                    type="password" 
+                    name="password" 
+                    placeholder="••••••••" 
+                    onChange={handleChange} 
+                    className="auth-input"
+                    required 
+                  />
+                </Form.Group>
+
+                <Button type="submit" className="w-100 auth-btn mt-2">
+                  {isLogin ? 'Sign In' : 'Sign Up'}
+                </Button>
+              </Form>
+
+              <div className="text-center mt-4 pt-3 border-top">
+                <span className="text-muted small">
+                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                </span>
+                <Button 
+                  variant="link" 
+                  className="p-0 auth-link-btn small" 
+                  onClick={() => { setIsLogin(!isLogin); setError(''); }}
+                >
+                  {isLogin ? 'Sign up for free' : 'Log in here'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </Col>
+
+      </Row>
     </Container>
   );
 };
