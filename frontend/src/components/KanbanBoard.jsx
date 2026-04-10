@@ -73,45 +73,76 @@ const KanbanBoard = () => {
 
   const handleSaveJob = async (jobData) => {
     try {
+      // 1. Construct the FormData payload
+      const submitData = new FormData();
+      submitData.append('company', jobData.company);
+      submitData.append('role', jobData.role);
+      submitData.append('status', jobData.status);
+
+      if (jobData.location) {
+        submitData.append('location', jobData.location);
+      }
+      
+      if (jobData.applicationLink) {
+        submitData.append('applicationLink', jobData.applicationLink);
+      }
+      if (jobData.resumeFile) {
+        submitData.append('resumeFile', jobData.resumeFile);
+      }
+
+      if (jobData.status === 'interviewing' && jobData.interviewDate) {
+        submitData.append('interviewDate', jobData.interviewDate);
+      }
+
+      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+
       if (editingJob) {
-        // --- 1. EDIT EXISTING JOB IN DATABASE ---
-        await api.put(`/jobs/${jobData.id}`, jobData);
+        // --- EDIT EXISTING JOB ---
+        const response = await api.put(`/jobs/${jobData.id}`, submitData, config);
+        
+        // CRITICAL FIX: Grab the perfectly formatted job from the backend response!
+        // This ensures we get the text string path, not the raw File object.
+        const updatedJobFromServer = response.data;
+        const formattedUpdatedJob = { ...updatedJobFromServer, id: updatedJobFromServer._id };
 
         setData(prevData => {
-          const originalJob = prevData.jobs[jobData.id];
+          const originalJob = prevData.jobs[formattedUpdatedJob.id];
           let newColumns = { ...prevData.columns };
 
-          if (originalJob.status !== jobData.status) {
+          // If the status changed, move the job to the new column
+          if (originalJob.status !== formattedUpdatedJob.status) {
             const oldColumn = newColumns[originalJob.status];
-            const newColumn = newColumns[jobData.status];
+            const newColumn = newColumns[formattedUpdatedJob.status];
 
             newColumns[originalJob.status] = {
               ...oldColumn,
-              jobIds: oldColumn.jobIds.filter(id => id !== jobData.id)
+              jobIds: oldColumn.jobIds.filter(id => id !== formattedUpdatedJob.id)
             };
             
-            newColumns[jobData.status] = {
+            newColumns[formattedUpdatedJob.status] = {
               ...newColumn,
-              jobIds: [...newColumn.jobIds, jobData.id]
+              jobIds: [...newColumn.jobIds, formattedUpdatedJob.id]
             };
           }
 
+          // Save the clean server data to React state
           return {
             ...prevData,
-            jobs: { ...prevData.jobs, [jobData.id]: jobData },
+            jobs: { ...prevData.jobs, [formattedUpdatedJob.id]: formattedUpdatedJob },
             columns: newColumns
           };
         });
+
       } else {
-        // --- 2. SAVE NEW JOB TO DATABASE ---
-        // We POST to the backend, and MongoDB creates the real _id
-        const response = await api.post('/jobs', jobData);
-        const newJob = response.data; 
+        // --- SAVE NEW JOB ---
+        const response = await api.post('/jobs', submitData, config);
         
-        // Use the real MongoDB _id instead of our fake Date.now() ID
+        // Grab the perfectly formatted job from the backend response
+        const newJob = response.data; 
         const newJobId = newJob._id; 
         const formattedNewJob = { ...newJob, id: newJobId };
-        const selectedStatus = newJob.status; 
+        
+        const selectedStatus = formattedNewJob.status; 
         const targetColumn = data.columns[selectedStatus];
         
         const newJobIds = Array.from(targetColumn.jobIds);
@@ -205,6 +236,10 @@ const KanbanBoard = () => {
       ...data.jobs[draggableId],
       status: finishColumn.id // e.g., updates 'wishlist' to 'interviewing'
     };
+
+    if (updatedJob.status !== 'interviewing') {
+      updatedJob.interviewDate = null;
+    }
 
     api.put(`/jobs/${draggableId}`, { status: finishColumn.id })
       .catch(err => {console.error("The exact backend error is:", err.response?.data?.message || err.message);

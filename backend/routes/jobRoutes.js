@@ -1,16 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const { getJobs, createJob, updateJob, deleteJob } = require('../controllers/jobController');
-//Import the protect middleware
 const { protect } = require('../middleware/authMiddleware');
 
-// Add 'protect' as the first argument to secure the routes
+//Import the upload middleware
+const upload = require('../middleware/uploadMiddleware');
+
+// Add upload.single('resumeFile') to the POST route
 router.route('/')
   .get(protect, getJobs)
-  .post(protect, createJob);
+  .post(protect, upload.single('resumeFile'), createJob);
 
+// Add it to the PUT route as well, in case you upload a resume during an edit
 router.route('/:id')
-  .put(protect, updateJob)
+  .put(protect, upload.single('resumeFile'), updateJob)
   .delete(protect, deleteJob);
 
 module.exports = router;

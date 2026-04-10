@@ -1,4 +1,6 @@
 const Job = require('../models/Job');
+const fs = require('fs'); 
+const path = require('path');
 
 // 1. GET ALL JOBS
 const getJobs = async (req, res) => {
@@ -16,12 +18,22 @@ const getJobs = async (req, res) => {
 // 2. CREATE A NEW JOB
 const createJob = async (req, res) => {
   try {
-    // Failsafe: Ensure req.user exists before saving
     if (!req.user) return res.status(401).json({ message: 'User not found' });
 
-    req.body.user = req.user._id;
+    // 1. Grab all the standard text fields
+    const jobData = { ...req.body };
+    jobData.user = req.user._id;
+
+    // 2. If Multer successfully intercepted a file, save its path to the database
+    if (req.file) {
+      // It will save as something like "uploads/167890123-myresume.pdf"
+      jobData.resumeFile = req.file.path; 
+    }
     
-    const newJob = new Job(req.body);
+    console.log("Multer found this file:", req.file);
+    console.log("Job data about to be saved:", jobData);
+    
+    const newJob = new Job(jobData);
     const savedJob = await newJob.save();
     res.status(201).json(savedJob);
   } catch (error) {
@@ -35,19 +47,36 @@ const updateJob = async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ message: 'Job not found in database' });
 
-    // Failsafe 1: If the middleware failed or req.user is missing, stop immediately
     if (!req.user) {
       return res.status(401).json({ message: 'User session missing. Cannot update job.' });
     }
 
-    // Failsafe 2: If the job doesn't belong to anyone (legacy test data), stop immediately
-    if (!job.user) {
-       return res.status(401).json({ message: 'This is a legacy job entry. Please delete it.' });
-    }
-
-    // Security Check: Does the logged-in user own this specific job?
     if (job.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Not authorized to update this job' });
+    }
+
+    // --- HANDLE FILE REMOVAL ---
+    if (req.body.resumeFile === 'REMOVE') {
+      if (job.resumeFile) {
+        const fs = require('fs');
+        const path = require('path');
+        const filePath = path.join(__dirname, '..', job.resumeFile);
+        
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath); 
+        }
+      }
+      req.body.resumeFile = null; 
+    }
+
+    // --- THE FIX: HANDLE NEW FILE UPLOAD DURING EDIT ---
+    // If Multer intercepted a new file during this update, grab its path!
+    if (req.file) {
+      req.body.resumeFile = req.file.path;
+    }
+
+    if (req.body.status && req.body.status !== 'interviewing') {
+      req.body.interviewDate = null; // Overwrites the ghost data with nothing
     }
 
     const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -66,6 +95,16 @@ const deleteJob = async (req, res) => {
     //SECURITY CHECK: Ensure the logged-in user owns this specific job
     if (!job.user || job.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Not authorized to delete this job' });
+    }
+
+    if (job.resumeFile) {
+      // Create the absolute path to the file
+      const filePath = path.join(__dirname, '..', job.resumeFile);
+      
+      // Check if the file actually exists on the hard drive, then delete it
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); 
+      }
     }
 
     await Job.findByIdAndDelete(req.params.id);

@@ -41,7 +41,7 @@ const AuthScreen = ({ setAuthStatus }) => {
         {/* LEFT COLUMN: Branding/Hero (Hidden on mobile devices) */}
         <Col lg={5} className="d-none d-lg-flex flex-column justify-content-center p-5 auth-hero shadow">
           <div className="ps-xl-5">
-            <h1 className="display-4 fw-bolder mb-4">CareerFlow</h1>
+            <h1 className="display-4 fw-bolder mb-4">Job Application Tracker</h1>
             <p className="lead fw-normal mb-5" style={{ opacity: 0.9 }}>
               Stop using spreadsheets. Start tracking your software engineering applications the right way.
             </p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 
 // Added editingJob prop
 const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
@@ -7,7 +7,10 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
     role: '',
     company: '',
     location: '',
-    status: 'applied' 
+    status: 'applied',
+    interviewDate: '',
+    applicationLink: '', 
+    resumeFile: null,
   });
 
   // Pre-fill the form if we are editing an existing job
@@ -20,9 +23,23 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
     }
   }, [editingJob, show]); // Re-run when the modal opens or the editingJob changes
 
+  // Helper function to convert MongoDB UTC dates back to local time for the input
+  const formatForDateTimeInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Get the local timezone offset in minutes, convert to milliseconds
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    // Subtract the offset to force the ISO string to output your local time
+    const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+    return localISOTime;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  const handleFileChange = (e) => {
+    setFormData({ ...formData, resumeFile: e.target.files[0] });
   };
 
   const onSubmit = (e) => {
@@ -109,6 +126,97 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
               <option value="rejected">Rejected</option>
             </Form.Select>
           </Form.Group>
+
+          {/* SMART INTERVIEW DATE INPUT */}
+        {/* This entire block only renders if the status is exactly 'interviewing' */}
+        {formData.status === 'interviewing' && (
+          <Form.Group className="mb-3" controlId="interviewDate">
+            <Form.Label className="text-secondary small fw-bold">Interview Date & Time</Form.Label>
+            <Form.Control 
+              type="datetime-local" 
+              name="interviewDate" 
+              // Pro-Tip: MongoDB saves dates as long ISO strings (2026-04-10T15:30:00.000Z).
+              // The datetime-local input requires exactly 16 characters (YYYY-MM-DDThh:mm).
+              // The .slice(0, 16) prevents the input box from breaking when editing an existing date!
+              value={formatForDateTimeInput(formData.interviewDate)}
+              onChange={handleChange} 
+            />
+          </Form.Group>
+        )}
+          
+         {/* Smart URL Input */}
+        <Form.Group className="mb-3" controlId="applicationLink">
+          <Form.Label className="text-secondary small fw-bold">Application URL</Form.Label>
+          <InputGroup>
+            <Form.Control 
+              type="url" 
+              name="applicationLink" 
+              placeholder="https://company.com/careers/..." 
+              value={formData.applicationLink || ''}
+              onChange={handleChange} 
+            />
+            
+            {/* Only show the clickable button if there is actually text in the box */}
+            {formData.applicationLink && (
+              <Button 
+                as="a" /* This magic prop turns the Bootstrap Button into a real <a> tag */
+                variant="outline-primary"
+                // Failsafe: If the user forgot 'https://', add it automatically so the link doesn't break
+                href={formData.applicationLink.startsWith('http') ? formData.applicationLink : `https://${formData.applicationLink}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="fw-bold px-3"
+              >
+                ↗ Visit
+              </Button>
+            )}
+          </InputGroup>
+        </Form.Group>
+
+        {/* Smart Resume Upload Section */}
+        <Form.Group className="mb-4">
+          <Form.Label className="text-secondary small fw-bold">Resume (PDF)</Form.Label>
+          
+          {formData.resumeFile && typeof formData.resumeFile !== 'string' && formData.resumeFile !== 'REMOVE' ? (
+            <div className="p-3 bg-light border border-primary border-opacity-50 rounded d-flex align-items-center justify-content-between">
+              <span className="text-primary small fw-bold mb-0">
+                📄 {formData.resumeFile.name}
+              </span>
+              <Button 
+                variant="outline-danger" 
+                size="sm" 
+                onClick={() => setFormData({ ...formData, resumeFile: null })}
+              >
+                Remove
+              </Button>
+            </div>
+          ) : (editingJob && editingJob.resumeFile && formData.resumeFile !== 'REMOVE') ? (
+            <div className="p-3 bg-light border rounded d-flex align-items-center justify-content-between">
+              <a 
+                href={`http://localhost:5000/${editingJob.resumeFile.replace(/\\/g, '/')}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline-primary fw-bold"
+              >
+                📄 View Current Resume
+              </a>
+              <Button 
+                variant="outline-danger" 
+                size="sm" 
+                onClick={() => setFormData({ ...formData, resumeFile: 'REMOVE' })}
+              >
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <Form.Control 
+              type="file" 
+              name="resumeFile" 
+              accept=".pdf,.doc,.docx" 
+              onChange={handleFileChange} 
+            />
+          )}
+        </Form.Group>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>Cancel</Button>

@@ -31,6 +31,18 @@ const jobSchema = new mongoose.Schema({
     enum: ['applied', 'interviewing', 'selected', 'rejected'], 
     default: 'applied' // Automatically drops new jobs into the first column
   },
+  interviewDate: { 
+    type: Date, 
+    required: false 
+  },
+  applicationLink: { 
+    type: String, 
+    required: false 
+  },
+  resumeFile: { 
+    type: String, 
+    required: false // This will eventually store the Cloudinary/S3 URL of your PDF
+  }
 }, {
   // This automatically adds 'createdAt' and 'updatedAt' timestamps to every entry!
   timestamps: true 
