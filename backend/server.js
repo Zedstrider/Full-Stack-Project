@@ -23,6 +23,27 @@ app.get('/api/test', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 
+// --- FORCE FILE DOWNLOAD ROUTE ---
+app.get('/api/download', (req, res) => {
+  const filePath = req.query.path;
+  
+  if (!filePath) {
+    return res.status(400).json({ message: 'No file path provided' });
+  }
+
+  const path = require('path');
+  // Combine the current directory with the requested file path
+  const absolutePath = path.join(__dirname, filePath);
+
+  // res.download() forces the browser to save the file instead of opening it
+  res.download(absolutePath, (err) => {
+    if (err) {
+      console.error("File download error:", err);
+      res.status(404).send("File not found on server.");
+    }
+  });
+});
+
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Successfully connected to MongoDB'))

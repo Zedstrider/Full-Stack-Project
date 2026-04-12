@@ -13,6 +13,8 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
     resumeFile: null,
   });
 
+  const [showPreview, setShowPreview] = useState(false);
+
   // Pre-fill the form if we are editing an existing job
   useEffect(() => {
     if (editingJob) {
@@ -191,22 +193,62 @@ const AddJobModal = ({ show, handleClose, handleSaveJob, editingJob }) => {
               </Button>
             </div>
           ) : (editingJob && editingJob.resumeFile && formData.resumeFile !== 'REMOVE') ? (
-            <div className="p-3 bg-light border rounded d-flex align-items-center justify-content-between">
-              <a 
-                href={`http://localhost:5000/${editingJob.resumeFile.replace(/\\/g, '/')}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="btn btn-sm btn-outline-primary fw-bold"
-              >
-                📄 View Current Resume
-              </a>
-              <Button 
-                variant="outline-danger" 
-                size="sm" 
-                onClick={() => setFormData({ ...formData, resumeFile: 'REMOVE' })}
-              >
-                Remove
-              </Button>
+            <div className="p-3 bg-light border rounded">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <span className="text-secondary small fw-bold mb-0">Attached File:</span>
+                
+                {/* BUTTON CONTROLS */}
+                <div className="d-flex gap-2">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
+                    onClick={() => setShowPreview(!showPreview)}
+                  >
+                    {showPreview ? 'Hide Preview' : '👁️ Preview'}
+                  </Button>
+                  
+                  {/* The 'download' attribute forces the browser to download instead of opening it */}
+                  <a 
+                    href={`http://localhost:5000/api/download?path=${editingJob.resumeFile}`} 
+                    className="btn btn-sm btn-outline-success fw-bold"
+                  >
+                    ⬇️ Download
+                  </a>
+
+                  <Button 
+                    variant="outline-danger" 
+                    size="sm" 
+                    onClick={() => {
+                      setFormData({ ...formData, resumeFile: 'REMOVE' });
+                      setShowPreview(false); // Close preview if they remove the file
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+
+              {/* INLINE VIEWER (Only shows if Preview is clicked) */}
+              {showPreview && (
+                <div className="mt-3">
+                  {/* Check if it's a PDF before trying to render it in an iframe */}
+                  {editingJob.resumeFile.toLowerCase().endsWith('.pdf') ? (
+                    <iframe 
+                      src={`http://localhost:5000/${editingJob.resumeFile.replace(/\\/g, '/')}`} 
+                      width="100%" 
+                      height="400px" 
+                      className="border rounded"
+                      title="Resume Preview"
+                    />
+                  ) : (
+                    /* Fallback for .docx files */
+                    <div className="p-4 text-center bg-white border rounded text-secondary">
+                      <p className="mb-0">📄 <em>Preview is only available for PDF files.</em></p>
+                      <p className="small mt-1 mb-0">Please use the <strong>Download</strong> button above to view this Word document.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <Form.Control 
